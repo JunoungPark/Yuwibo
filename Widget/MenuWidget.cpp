@@ -4,12 +4,15 @@
 #include "MenuWidget.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+
+#ifdef EOS
 #include "Online/AuthCommon.h"	
 #include "Online/Lobbies.h"
 #include "Online/Sessions.h"
 #include "Online/OnlineServicesCommon.h"
 #include "Online/CoreOnline.h"
 #include "Yuwibo/YuwiboGameInstance.h"
+#endif
 
 void UMenuWidget::Exit()
 {
@@ -17,6 +20,7 @@ void UMenuWidget::Exit()
     {
         PC->ClientTravel("/Game/BlueprintClass/Level/LobbyLevel", ETravelType::TRAVEL_Absolute); 
         
+#ifdef EOS
         using namespace UE::Online;
 
         if (auto AccountID = Cast<UYuwiboGameInstance>(GetGameInstance())->GetAccountID())
@@ -47,6 +51,7 @@ void UMenuWidget::Exit()
                 GetServices()->GetLobbiesInterface()->LeaveLobby(MoveTemp(LeaveParams));
             }
         }
+#endif
 
     }
 }

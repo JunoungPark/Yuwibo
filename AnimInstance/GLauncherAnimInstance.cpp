@@ -6,7 +6,6 @@
 #include "Camera/CameraActor.h"
 #include "TankBackGunAnimInstance.h"
 #include "Kismet/GameplayStatics.h"
-#include "Yuwibo/GLauncherHUD.h"
 #include "Yuwibo/Actor/Projectile/GLauncher.h"
 #include "Yuwibo/Component/LookComponent.h"
 #include "Camera/CameraComponent.h"

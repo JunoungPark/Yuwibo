@@ -10,7 +10,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Yuwibo/YuwiboGameModeBase.h"
 #include "Yuwibo/Component/MoveComponent.h"
-#include "Online/Lobbies.h"
 #include "Yuwibo/Widget/TeleportationWidget.h"
 #include "Yuwibo/Component/InformationComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -18,11 +17,16 @@
 #include "Yuwibo/Widget/PointWidget.h"
 #include "Yuwibo/Character/RockMonster.h"
 #include "Yuwibo/Widget/MenuWidget.h"
+
+#ifdef EOS
+#include "Online/Lobbies.h"
 #include "Online/AuthCommon.h"	
 #include "Online/Lobbies.h"
 #include "Online/Sessions.h"
 #include "Online/OnlineServicesCommon.h"
 #include "Online/CoreOnline.h"
+#endif
+
 void ABasePlayerController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
@@ -109,6 +113,7 @@ void ABasePlayerController::GetPlayerNum_Implementation()
 {
     UE_LOG(LogTemp, Log, TEXT("FunctionName : GetPlayerNum"));
 
+#ifdef EOS
     using namespace UE::Online;
     FGetJoinedLobbies::Params JoinedParams;
     JoinedParams.LocalAccountId = Cast<UYuwiboGameInstance>(GetGameInstance())->GetAccountID();
@@ -117,6 +122,8 @@ void ABasePlayerController::GetPlayerNum_Implementation()
     {
         SendPlayerNum(JoinedLobbies.GetOkValue().Lobbies[0]->Members.Num());
     }
+#endif EOS
+
 }
 
 void ABasePlayerController::AddViewportWidget_Implementation()
@@ -227,6 +234,7 @@ void ABasePlayerController::MatchEnd()
     {
         PC->ClientTravel("/Game/BlueprintClass/Level/LobbyLevel", ETravelType::TRAVEL_Absolute);
 
+#ifdef EOS
         using namespace UE::Online;
 
         if (auto AccountID=Cast<UYuwiboGameInstance>(GetGameInstance())->GetAccountID())
@@ -257,7 +265,7 @@ void ABasePlayerController::MatchEnd()
                 GetServices()->GetLobbiesInterface()->LeaveLobby(MoveTemp(LeaveParams));
             }
         }
-
+#endif
     }
 }
 

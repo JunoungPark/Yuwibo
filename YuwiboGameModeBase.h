@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "Yuwibo/Character/BaseCharacter.h"
-#include "Online/Lobbies.h"
+//#include "Online/Lobbies.h"
 #include "YuwiboGameModeBase.generated.h"
 
 UCLASS()
@@ -15,6 +15,16 @@ class YUWIBO_API AYuwiboTestModeBase : public AGameModeBase
 
 public:
 	AYuwiboTestModeBase();
+
+};
+
+UCLASS()
+class YUWIBO_API AYuwiboSigninModeBase : public AGameModeBase
+{
+	GENERATED_BODY()
+
+public:
+	AYuwiboSigninModeBase();
 
 };
 

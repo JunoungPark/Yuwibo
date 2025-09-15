@@ -4,9 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Online/Lobbies.h"
 #include "Blueprint/IUserObjectListEntry.h"
-#include "Yuwibo/YuwiboGameInstance.h"
+#include "Yuwibo/Networking/UnrealEngineMessage.pb.h"
 #include "LobbyBrowserWidget.generated.h"
 
 /**
@@ -45,18 +44,18 @@ private:
 	UPROPERTY()
 	class ULobbyWidget* LobbyWidget;
 private:
-	FORCEINLINE UE::Online::FAccountId GetAccountID() { auto GameInstance = Cast<UYuwiboGameInstance>(GetGameInstance()); return GameInstance ? GameInstance->GetAccountID() : UE::Online::FAccountId(); }
 
 	UFUNCTION()
 	void OnItemDoubleClicked(UObject* MyListView);
 
 	UFUNCTION()
-	FORCEINLINE void FindLobby(const FText& Text) { UpdateEntry(); }
+	void CreateRoom();
 
+#ifdef EOS
 	void JoinLobby(UE::Online::FLobbyId LobbyID);
 
-	UFUNCTION()
 	void CreateLobby();
+#endif
 
 	UFUNCTION()
 	void Cancel();
@@ -66,20 +65,27 @@ private:
 public:
 	void NativeOnInitialized()override;
 
+	void SetLobbyEntry(ULobbyEntryWidget& Entry, UnrealEngineMessage::RoomInfo Room);
+
+	void UpdateEntry(const google::protobuf::RepeatedPtrField<UnrealEngineMessage::RoomInfo>& Rooms);
+
+#ifdef EOS
+	FORCEINLINE void FindLobby(const FText& Text) { UpdateEntry(); }
+
 	void SetLobbyEntry(ULobbyEntryWidget& Entry, UE::Online::FLobby Lobby);
-
-	void CreateLobbyWidget();
-
 	void UpdateEntry();
-
 	void UpdateLobby();
+#endif
+
+	std::string GetSearchLobbyName();
 };
 
 UCLASS()
 class YUWIBO_API ULobbyEntryWidget : public UUserWidget, public IUserObjectListEntry
 {
 	GENERATED_BODY()
-	friend void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UE::Online::FLobby Lobby);
+	friend void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UnrealEngineMessage::RoomInfo Room);
+	//friend void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UE::Online::FLobby Lobby);
 private:
 	UPROPERTY(meta = (BindWidget))
 	class UButton* LobbyButton;
@@ -87,74 +93,23 @@ private:
 	class UTextBlock* Lobby_Name;
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* PlayersNum;
-
+	
+	uint32 LobbyID;
 	FText LobbyName;
 	uint8 PlayersCurrentNum;
 	uint8 PlayersMaxNum;
 
-	UE::Online::FLobbyId LobbyID;
+	//UE::Online::FLobbyId LobbyID;
 private:
 
 	void SetData(ULobbyEntryWidget* Widget);
 public:
 
-	FORCEINLINE UE::Online::FLobbyId GetLobbyID() { return LobbyID; }
+	FORCEINLINE uint32 GetLobbyID() { return LobbyID; }
 
+	//FORCEINLINE UE::Online::FLobbyId GetLobbyID() { return LobbyID; }
 
 	void NativeOnListItemObjectSet(UObject* ListItemObject);
 
 };
 
-UCLASS()
-class YUWIBO_API ULobbyWidget : public UUserWidget
-{
-	GENERATED_BODY()
-
-	friend void ULobbyBrowserWidget::UpdateLobby();
-
-	UPROPERTY(meta = (BindWidget))
-	class UButton* FirstMemberButton;
-	UPROPERTY(meta = (BindWidget))
-	class UButton* SecondMemberButton;
-	UPROPERTY(meta = (BindWidget))
-	class UButton* ThirdMemberButton;
-	UPROPERTY(meta = (BindWidget))
-	class UButton* StartGameButton;
-	UPROPERTY(meta = (BindWidget))
-	class UButton* LeaveLobbyButton;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* HostName;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* FirstMember;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* SecondMember;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ThirdMember;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* StartGame;
-	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* ExitLobby;
-private:
-	FORCEINLINE UE::Online::FAccountId GetAccountID() { auto GameInstance = Cast<UYuwiboGameInstance>(GetGameInstance()); return GameInstance ? GameInstance->GetAccountID() : UE::Online::FAccountId(); }
-
-	UFUNCTION()
-	void GameStart();
-	UFUNCTION()
-	void LeaveLobby();
-
-	UFUNCTION()
-	void OnStartButtonHovered();
-
-	UFUNCTION()
-	void OnStartButtonUnHovered();
-
-	UFUNCTION()
-	void OnExitButtonHovered();
-
-	UFUNCTION()
-	void OnExitButtonUnHovered();
-protected:
-	void NativeOnInitialized()override;
-
-	FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)override;
-};

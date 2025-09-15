@@ -4,6 +4,8 @@
 #include "YuwiboGameModeBase.h"
 #include "YuwiboPlayerState.h"
 #include "Controller/BasePlayerController.h"
+#include "Controller/SigninPlayerController.h"
+#include "Controller/LobbyPlayerController.h"
 #include "ATimerManager.h"
 #include "Components/SceneCaptureComponent.h"
 #include "Actor/StoneStatue.h"
@@ -38,9 +40,18 @@ AYuwiboTestModeBase::AYuwiboTestModeBase()
 	PlayerControllerClass = ABasePlayerController::StaticClass();
 }
 
+
+AYuwiboSigninModeBase::AYuwiboSigninModeBase()
+{
+	DefaultPawnClass = nullptr;
+	PlayerControllerClass = ASigninPlayerController::StaticClass();
+}
+
 AYuwiboLobbyModeBase::AYuwiboLobbyModeBase()
 {
 	DefaultPawnClass = nullptr;
+	PlayerControllerClass = ALobbyPlayerController::StaticClass();
+
 	//PlayerControllerClass = ABasePlayerController::StaticClass();
 
 	//ConstructorHelpers::FClassFinder<UStartScreenWidget> SSW(TEXT("WidgetBlueprint'/Game/BlueprintClass/HUD/StartScreenWidgetBlueprint.StartScreenWidgetBlueprint_C'"));

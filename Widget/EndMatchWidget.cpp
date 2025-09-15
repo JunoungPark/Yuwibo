@@ -6,12 +6,15 @@
 #include "Components/TextBlock.h"
 #include "kismet/GameplayStatics.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+
+#ifdef EOS
 #include "Online/AuthCommon.h"	
 #include "Online/Lobbies.h"
 #include "Online/Sessions.h"
 #include "Online/OnlineServicesCommon.h"
 #include "Online/CoreOnline.h"
 #include "Yuwibo/YuwiboGameInstance.h"
+#endif
 
 void UEndMatchWidget::NativeOnInitialized()
 {
@@ -39,6 +42,7 @@ void UEndMatchWidget::Exit()
     {
         PC->ClientTravel("/Game/BlueprintClass/Level/LobbyLevel", ETravelType::TRAVEL_Absolute);
 
+#ifdef EOS
         using namespace UE::Online;
 
         if (auto AccountID = Cast<UYuwiboGameInstance>(GetGameInstance())->GetAccountID())
@@ -69,5 +73,6 @@ void UEndMatchWidget::Exit()
                 GetServices()->GetLobbiesInterface()->LeaveLobby(MoveTemp(LeaveParams));
             }
         }
+#endif
     }
 }

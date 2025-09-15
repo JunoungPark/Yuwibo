@@ -2,19 +2,32 @@
 
 
 #include "LobbyBrowserWidget.h"
-#include "Online/OnlineServices.h"
-#include "Online/CoreOnline.h"
-#include "Online/Auth.h"
+#include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
 #include "Components/ListView.h"
 #include "Components/EditableTextBox.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"	
+#include "Yuwibo/Networking/NetworkingSubsystem.h"
+
+#ifdef EOS
+#include "Online/OnlineServices.h"
+#include "Online/CoreOnline.h"
+#include "Online/Auth.h"
 #include "Online/Sessions.h"	
 #include "OnlineServicesCommon/Public/Online/SessionsCommon.h"
-#include "Kismet/GameplayStatics.h"
 #include "Online/UserInfo.h"
 #include "SocketSubsystem.h"
+#endif
+
+void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UnrealEngineMessage::RoomInfo Room)
+{
+    Entry.LobbyID = Room.id();
+    Entry.LobbyName = FText::FromString(FString(UTF8_TO_TCHAR(Room.room_name().c_str())));
+    Entry.PlayersCurrentNum = Room.current_player_count();
+    Entry.PlayersMaxNum = Room.max_player_count();
+}
+#ifdef EOS
 void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UE::Online::FLobby Lobby)
 {
     Entry.LobbyName = FText::FromString(Lobby.Attributes.Find(FName("HostName"))->GetString());
@@ -25,12 +38,19 @@ void ULobbyBrowserWidget::SetLobbyEntry(ULobbyEntryWidget& Entry, UE::Online::FL
     Entry.LobbyID = Lobby.LobbyId;
    // Entry.Lobby_Name->SetText();
 }
+#endif
 
 void ULobbyBrowserWidget::OnItemDoubleClicked(UObject* MyListView)
 {
-    JoinLobby(Cast<ULobbyEntryWidget>(MyListView)->GetLobbyID());
+    GetGameInstance()->GetSubsystem<UNetworkingSubsystem>()->JoinRoom(Cast<ULobbyEntryWidget>(MyListView)->GetLobbyID());
 }
 
+void ULobbyBrowserWidget::CreateRoom()
+{
+    GetGameInstance()->GetSubsystem<UNetworkingSubsystem>()->CreateRoom(HostName->GetText());
+}
+
+#ifdef EOS
 void ULobbyBrowserWidget::JoinLobby(UE::Online::FLobbyId LobbyID)
 {
     UE::Online::ILobbiesPtr Lobbies = UE::Online::GetServices()->GetLobbiesInterface();
@@ -122,6 +142,7 @@ void ULobbyBrowserWidget::CreateLobby()
 
     Cancel();
 }
+#endif
 
 void ULobbyBrowserWidget::Cancel()
 {
@@ -136,6 +157,7 @@ void ULobbyBrowserWidget::GameExit()
     }
 }
 
+#ifdef EOS
 void ULobbyBrowserWidget::UpdateLobby()
 {
     using namespace UE::Online; 
@@ -215,22 +237,38 @@ void ULobbyBrowserWidget::UpdateLobby()
         LobbyWidget->StartGameButton->SetRenderOpacity(0.1f);
     }
 }
+#endif
 
-void ULobbyBrowserWidget::CreateLobbyWidget()
+std::string ULobbyBrowserWidget::GetSearchLobbyName()
 {
-    if (LobbyWidget)    LobbyWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-    else if (auto SSW = LoadObject<UClass>(nullptr, TEXT("WidgetBlueprint'/Game/BlueprintClass/HUD/LobbyWidgetBlueprint.LobbyWidgetBlueprint_C'")))
-    {
-        LobbyWidget = CreateWidget<ULobbyWidget>(GetWorld(), SSW);
-
-        if (LobbyWidget) LobbyWidget->AddToViewport();
-        
-    }
+    return TCHAR_TO_UTF8(*LobbyNameText->GetText().ToString());
 }
+
+void ULobbyBrowserWidget::UpdateEntry(const google::protobuf::RepeatedPtrField<UnrealEngineMessage::RoomInfo>& Rooms)
+{
+    TArray<UObject*> NewListData;
+
+    for (auto& Room : Rooms)
+    {
+        if (!LobbyNameText->GetText().IsEmptyOrWhitespace())
+        {
+            if (FString(UTF8_TO_TCHAR(Room.room_name().c_str())).Contains(LobbyNameText->GetText().ToString()));
+            else continue;
+        }
+        auto Entry = NewObject<ULobbyEntryWidget>(this, ULobbyEntryWidget::StaticClass());
+        SetLobbyEntry(*Entry, Room);
+        NewListData.Emplace(Entry);
+
+        //UE_LOG(LogTemp, Log, TEXT(": %s,: %d / %d"), Lobby.Get().Members.Num(), Lobby.Get().MaxMembers);
+    }
+    Lobby_List->SetListItems(NewListData);
+   
+}
+
+#ifdef EOS
 
 void ULobbyBrowserWidget::UpdateEntry()
 {
-
     UE::Online::ILobbiesPtr Lobbies = UE::Online::GetServices()->GetLobbiesInterface();
 
     UE::Online::FFindLobbies::Params FindParams;
@@ -283,15 +321,25 @@ void ULobbyBrowserWidget::UpdateEntry()
                 UE_LOG(LogTemp, Error, TEXT("%s"), *Result.GetErrorValue().GetLogString());
             }
         });
+
+
 }
+#endif
 
 void ULobbyBrowserWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    using namespace UE::Online;
-
     ExitButton->OnClicked.AddDynamic(this, &ULobbyBrowserWidget::GameExit);
+
+    LobbyNameText->OnTextChanged.AddDynamic(GetGameInstance()->GetSubsystem<UNetworkingSubsystem>(), &UNetworkingSubsystem::FindRoom);
+    Lobby_List->OnItemDoubleClicked().AddUFunction(this, "OnItemDoubleClicked");
+
+    HostGameButton->OnClicked.AddDynamic(this, &ULobbyBrowserWidget::CreateRoom);
+    CancelButton->OnClicked.AddDynamic(this, &ULobbyBrowserWidget::Cancel);
+
+#ifdef EOS
+    using namespace UE::Online;
 
     auto AttrChangedHandle = GetServices()->GetLobbiesInterface()->OnLobbyAttributesChanged().Add([this](const FLobbyAttributesChanged& Data)
         {
@@ -426,13 +474,10 @@ void ULobbyBrowserWidget::NativeOnInitialized()
             GetServices()->GetLobbiesInterface()->ModifyLobbyAttributes(MoveTemp(Params));
         });
 
-    LobbyNameText->OnTextChanged.AddDynamic(this, &ULobbyBrowserWidget::FindLobby);
-    Lobby_List->OnItemDoubleClicked().AddUFunction(this, "OnItemDoubleClicked");
-
-    HostGameButton->OnClicked.AddDynamic(this, &ULobbyBrowserWidget::CreateLobby);
-    CancelButton->OnClicked.AddDynamic(this, &ULobbyBrowserWidget::Cancel); 
-    
     UpdateEntry();
+
+#endif
+    
 }
 
 void ULobbyEntryWidget::SetData(ULobbyEntryWidget* Widget)
@@ -447,181 +492,4 @@ void ULobbyEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
     IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
     SetData(static_cast<ULobbyEntryWidget*>(ListItemObject));
-}
-
-void ULobbyWidget::GameStart()
-{
-    using namespace UE::Online;
-
-    //FGetJoinedLobbies::Params CurrentLobbyParams;
-    //
-    //CurrentLobbyParams.LocalAccountId = GetAccountID();
-    //if (GetServices()->GetLobbiesInterface()->GetJoinedLobbies(MoveTemp(CurrentLobbyParams)).GetOkValue().Lobbies[0]->Members.Num() < 2) return;
-
-    FCreateSession::Params Params;
-    
-    Params.LocalAccountId = GetAccountID();
-    Params.SessionName = "Game";
-    Params.bPresenceEnabled = true;
-    Params.SessionSettings.SchemaName = "GameSession";
-    Params.SessionSettings.NumMaxConnections = 3;
-
-    GetServices()->GetSessionsInterface()->CreateSession(MoveTemp(Params)).OnComplete([this](const TOnlineResult<FCreateSession>& Result)
-    {
-        if (Result.IsOk())
-        {
-
-            FGetJoinedLobbies::Params LobbyParams;
-         
-            LobbyParams.LocalAccountId = GetAccountID();
-
-            FModifyLobbyAttributes::Params Params;
-            Params.LobbyId = GetServices()->GetLobbiesInterface()->GetJoinedLobbies(MoveTemp(LobbyParams)).GetOkValue().Lobbies[0]->LobbyId;
-
-            FModifyLobbyJoinPolicy::Params PolicyParams;
-            PolicyParams.LocalAccountId = GetAccountID();
-            PolicyParams.LobbyId = Params.LobbyId;
-            PolicyParams.JoinPolicy = ELobbyJoinPolicy::InvitationOnly;
-
-            GetServices()->GetLobbiesInterface()->ModifyLobbyJoinPolicy(MoveTemp(PolicyParams));
-
-            Params.LocalAccountId = GetAccountID();
-
-            FGetAllSessions::Params SessionParams;
-            SessionParams.LocalAccountId = GetAccountID();
-
-            auto SessionID = GetServices()->GetSessionsInterface()->GetAllSessions(MoveTemp(SessionParams)).GetOkValue().Sessions[0]->GetSessionId();
-            Params.UpdatedAttributes.Emplace(FSchemaAttributeId(TEXT("GameSessionId")), FSchemaVariant(FOnlineSessionIdStringRegistry(SessionID.GetOnlineServicesType()).ToLogString(SessionID)));
-            
-
-            FString ServerExecutablePath = FPaths::Combine(FPaths::LaunchDir(), TEXT("../WindowsServer/Yuwibo/Binaries/Win64/YuwiboServer-Win64-Shipping.exe"));
-            //FString ServerExecutablePath = FPaths::Combine(FPaths::ProjectDir(), TEXT("Binaries/Win64/YuwiboServer.exe"));
-            int32 ServerPort = 7777;
-            FString MapName = TEXT("/Game/BattleRoyaleStarterKit/Maps/BattleRoyale_Map_a/BattleRoyale_Map_a_WP");
-            //FString MapName = TEXT("/Game/BlueprintClass/Level/GameLevel");
-
-            FString CommandLineArgs = FString::Printf(TEXT("%s -log -port=%d"), *MapName, ServerPort);
-
-            // ���� ����
-            FPlatformProcess::CreateProc(
-                *ServerExecutablePath,
-                *CommandLineArgs,
-                true,
-                false,
-                false,
-                nullptr,
-                0,
-                nullptr,
-                nullptr
-            );
-
-            // ���� URL ����
-            bool bCanBind = false;
-
-            FString ServerURL = FString::Printf(TEXT("%s:%d"), *ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBind)->ToString(false), ServerPort);
-
-            // ��: "192.168.0.23:7777"
-            Params.UpdatedAttributes.Emplace(FSchemaAttributeId(TEXT("URL")), FSchemaVariant(ServerURL));
-
-            GetServices()->GetLobbiesInterface()->ModifyLobbyAttributes(MoveTemp(Params));
-            
-            UGameplayStatics::GetPlayerController(GetWorld(), 0)->ClientTravel(FString::Printf(TEXT("%s"), *ServerURL), TRAVEL_Absolute);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("%s"), *Result.GetErrorValue().GetLogString());
-        }
-    });
-}
-
-void ULobbyWidget::LeaveLobby()
-{
-    SetVisibility(ESlateVisibility::Collapsed);
-
-    using namespace UE::Online;
-
-    FGetJoinedLobbies::Params JoinedParams;
-    JoinedParams.LocalAccountId = GetAccountID();
-    auto JoinedLobbies = GetServices()->GetLobbiesInterface()->GetJoinedLobbies(MoveTemp(JoinedParams));
-    if (JoinedLobbies.IsOk() && JoinedLobbies.GetOkValue().Lobbies.Num())
-    {
-        FLeaveLobby::Params LeaveParams;
-        LeaveParams.LobbyId = JoinedLobbies.GetOkValue().Lobbies[0]->LobbyId;
-        LeaveParams.LocalAccountId = GetAccountID();
-
-        GetServices()->GetLobbiesInterface()->LeaveLobby(MoveTemp(LeaveParams));
-    }
-}
-
-void ULobbyWidget::OnStartButtonHovered()
-{
-    StartGame->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f))); 
-    FSlateFontInfo FontInfo = StartGame->GetFont();
-    FontInfo.Size = 42; // 원하는 크기로 설정
-    StartGame->SetFont(FontInfo);
-}
-
-void ULobbyWidget::OnStartButtonUnHovered()
-{
-    StartGame->SetColorAndOpacity(FSlateColor(FLinearColor(0.75f, 0.75f, 0.75f, 1.0f))); 
-    FSlateFontInfo FontInfo = StartGame->GetFont();
-    FontInfo.Size = 35; // 원하는 크기로 설정
-    StartGame->SetFont(FontInfo);
-}
-
-void ULobbyWidget::OnExitButtonHovered()
-{
-    ExitLobby->SetColorAndOpacity(FSlateColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f)));
-    FSlateFontInfo FontInfo = StartGame->GetFont();
-    FontInfo.Size = 42; // 원하는 크기로 설정
-    ExitLobby->SetFont(FontInfo);
-}
-
-void ULobbyWidget::OnExitButtonUnHovered()
-{
-    ExitLobby->SetColorAndOpacity(FSlateColor(FLinearColor(0.75f, 0.75f, 0.75f, 1.0f)));
-    FSlateFontInfo FontInfo = StartGame->GetFont();
-    FontInfo.Size = 35; // 원하는 크기로 설정
-    ExitLobby->SetFont(FontInfo);
-}
-
-void ULobbyWidget::NativeOnInitialized()
-{
-    FirstMemberButton;
-    SecondMemberButton;
-    ThirdMemberButton;
-    StartGameButton->OnClicked.AddDynamic(this, &ULobbyWidget::GameStart);
-    StartGameButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnStartButtonHovered);
-    StartGameButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnStartButtonUnHovered);
-    StartGameButton->OnPressed.AddDynamic(this, &ULobbyWidget::OnStartButtonUnHovered);
-    StartGameButton->OnReleased.AddDynamic(this, &ULobbyWidget::OnStartButtonHovered);
-
-    LeaveLobbyButton->OnClicked.AddDynamic(this, &ULobbyWidget::LeaveLobby);
-    LeaveLobbyButton->OnHovered.AddDynamic(this, &ULobbyWidget::OnExitButtonHovered);
-    LeaveLobbyButton->OnUnhovered.AddDynamic(this, &ULobbyWidget::OnExitButtonUnHovered);
-    LeaveLobbyButton->OnPressed.AddDynamic(this, &ULobbyWidget::OnExitButtonUnHovered);
-    LeaveLobbyButton->OnReleased.AddDynamic(this, &ULobbyWidget::OnStartButtonHovered);
-}
-
-FReply ULobbyWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-    if (InMouseEvent.GetEffectingButton() != EKeys::RightMouseButton)  return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
-    
-    TArray<UButton*> ButtonsToCheck = {
-             FirstMemberButton,
-             SecondMemberButton,
-             ThirdMemberButton,
-    };
-
-    auto Position = InMouseEvent.GetScreenSpacePosition();
-
-    for (auto& Button : ButtonsToCheck)
-    {
-        if (Button && Button->GetCachedGeometry().IsUnderLocation(Position))
-        {
-            return FReply::Handled();
-        }
-    }
-
-    return FReply::Unhandled();
 }

@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "Engine/DataTable.h"
+#include "YuwiboGameInstance.generated.h"
+
+#ifdef EOS
 #include "Online/Auth.h"
 #include "Online/OnlineServices.h"
-#include "YuwiboGameInstance.generated.h"
+#endif
 
 UENUM()
 enum class ItemType : uint8
@@ -73,22 +76,23 @@ class YUWIBO_API UYuwiboGameInstance : public UGameInstance
 
 public:
 	UYuwiboGameInstance();
+
+#ifdef EOS
 private:
-	UFUNCTION()
 	void LoginClient();
 
-	//UFUNCTION(Server, Reliable)
-	//void LoginServer(TOnlineId<OnlineIdHandleTags::FAccount> AccountId);
+	void LoginServer(TOnlineId<OnlineIdHandleTags::FAccount> AccountId);
 public:
 	virtual void Init() override;
-
+	void OnStart()override;
 	virtual void Shutdown()override;
+
+	FORCEINLINE UE::Online::FAccountId GetAccountID() { return AccountID; }
+#endif
 
 public:
 	FYuwiboCharacterData* GetCharacterData(FName CharacterName);
 	FYuwiboItemData* GetItemData(uint8 ItemID);
-
-	FORCEINLINE UE::Online::FAccountId GetAccountID() { return AccountID; }
 
 private:
 		class UDataTable* CharacterDataTable;
