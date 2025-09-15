@@ -20,6 +20,9 @@ Unreal Engine 5를 기반으로 제작한 1인 개발 배틀 로얄 게임입니
 - C++
 - Blueprints
 - UMG (UI 시스템)
+- 
+- ## 🏆 연관 프로젝트
+- [자체제작 서버](https://github.com/JunoungPark/YuwiboServer) — 암호화된 로그인, 로비 구현
 
 ## 📽️ 시연 영상
 - 📺 [YouTube 시연 영상 보기](https://youtu.be/G17inX9z-xU) — 로그인, 로비, 전투 시스템 등 주요 기능 시연
