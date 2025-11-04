@@ -1,0 +1,26 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.CombatEditorTool.cpp.obj": [
+			"CombatEditorTool.init.gen.cpp.obj",
+			"CombatEditorToolEditorMode.gen.cpp.obj",
+			"CombatEditorToolInteractiveTool.gen.cpp.obj",
+			"CombatEditorToolSimpleTool.gen.cpp.obj",
+			"CombatWavePreviewActor.gen.cpp.obj",
+			"CombatWaveType.gen.cpp.obj",
+			"PerModuleInline.gen.cpp.obj",
+			"CombatEditorToolEditorMode.cpp.obj",
+			"CombatEditorToolEditorModeCommands.cpp.obj",
+			"CombatEditorToolEditorModeToolkit.cpp.obj",
+			"CombatEditorToolModule.cpp.obj",
+			"CombatWaveEditorController.cpp.obj",
+			"CombatWavePreviewActor.cpp.obj",
+			"CombatWaveType.cpp.obj",
+			"CombatEditorToolInteractiveTool.cpp.obj",
+			"CombatEditorToolSimpleTool.cpp.obj",
+			"SCombatWaveEditor.cpp.obj",
+			"SMonsterPanel.cpp.obj",
+			"SWaveListPanel.cpp.obj"
+		]
+	}
+}

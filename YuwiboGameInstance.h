@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Character/BaseCharacter.h"
 #include "Engine/DataTable.h"
 #include "YuwiboGameInstance.generated.h"
 
@@ -67,6 +68,9 @@ struct FYuwiboCharacterData : public FTableRowBase
 	TArray<FText> Key;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FText> Information;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSoftClassPtr<ABaseCharacter> Class;
+
 };
 
 UCLASS()

@@ -18,8 +18,12 @@ public class Yuwibo : ModuleRules
         //PublicAdditionalLibraries.Add(Path.Combine(ProtobufPath, "lib", "libprotobuf-lite.lib"));
         PublicAdditionalLibraries.Add(Path.Combine(ProtobufPath, "lib", "libprotoc.lib"));
 
+        PublicDelayLoadDLLs.Add("abseil_dll.dll"); 
         PublicDelayLoadDLLs.Add("libprotoc.dll");
-        PublicDelayLoadDLLs.Add("abseil_dll.dll");
+
+        RuntimeDependencies.Add("$(BinaryOutputDir)/abseil_dll.dll");
+        RuntimeDependencies.Add("$(BinaryOutputDir)/libprotobuf.dll");
+        RuntimeDependencies.Add("$(BinaryOutputDir)/libprotoc.dll");
 
         PublicDefinitions.Add("PROTOBUF_ENABLE_DEBUG_LOGGING_MAY_LEAK_PII=0"); 
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
